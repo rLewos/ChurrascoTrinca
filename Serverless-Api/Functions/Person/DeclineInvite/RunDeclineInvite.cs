@@ -7,38 +7,39 @@ using Domain.Repositories;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using static Domain.ServiceCollectionExtensions;
+using Domain.Services;
 
 namespace Serverless_Api
 {
     public partial class RunDeclineInvite
     {
         private readonly Person _user;
-        private readonly IPersonRepository _personRepository;
-        private readonly IBbqRepository _bbqRepository;
+		private readonly IPersonService _personService;
+		private readonly IBbqService _bbqService;
 
-        public RunDeclineInvite(Person user, IPersonRepository personRepository, IBbqRepository bbqRepository)
+		public RunDeclineInvite(Person user,  IPersonService personService, IBbqService bbqService)
         {
             _user = user;
-			_personRepository = personRepository;
-            _bbqRepository = bbqRepository;
+            _personService = personService;
+			_bbqService = bbqService;
         }
 
         [Function(nameof(RunDeclineInvite))]
         public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Function, "put", Route = "person/invites/{inviteId}/decline")] HttpRequestData req, string inviteId)
         {
-            var person = await _personRepository.GetAsync(_user.Id);
+            var person = await _personService.GetAsync(_user.Id);
 
             if (person == null)
                 return req.CreateResponse(System.Net.HttpStatusCode.NoContent);
 
             person.Apply(new InviteWasDeclined { InviteId = inviteId, PersonId = person.Id });
-            await _personRepository.SaveAsync(person);
+            await _personService.SaveAsync(person);
 
             //Implementar impacto da recusa do convite no churrasco caso ele já tivesse sido aceito antes
-            Bbq? bbq = await _bbqRepository.GetAsync(inviteId);
+            Bbq? bbq = await _bbqService.GetAsync(inviteId);
             var @event = new InviteWasDeclined() { InviteId = inviteId, PersonId = person.Id};
             bbq.Apply(@event);
-            await _bbqRepository.SaveAsync(bbq);
+            await _bbqService.SaveAsync(bbq);
 
             return await req.CreateResponse(System.Net.HttpStatusCode.OK, person.TakeSnapshot());
         }

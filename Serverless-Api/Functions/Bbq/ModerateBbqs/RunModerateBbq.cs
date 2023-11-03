@@ -2,6 +2,7 @@ using CrossCutting;
 using Domain.Entities;
 using Domain.Events;
 using Domain.Repositories;
+using Domain.Services;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 
@@ -10,14 +11,14 @@ namespace Serverless_Api
     public partial class RunModerateBbq
     {
         private readonly SnapshotStore _snapshots;
-        private readonly IPersonRepository _personRepository;
-        private readonly IBbqRepository _bdqRepository;
+		private readonly IPersonService _personService;
+		private readonly IBbqService _bbqService;
 
-        public RunModerateBbq(IBbqRepository bdqRepository, SnapshotStore snapshots, IPersonRepository personRepository)
+		public RunModerateBbq(SnapshotStore snapshots, IBbqService bbqService, IPersonService personService)
         {
             _snapshots = snapshots;
-			_personRepository = personRepository;
-			_bdqRepository = bdqRepository;
+			_bbqService = bbqService;
+			_personService = personService;
         }
 
         [Function(nameof(RunModerateBbq))]
@@ -27,7 +28,7 @@ namespace Serverless_Api
 
             try
             {
-				var bbq = await _bdqRepository.GetAsync(id);
+				var bbq = await _bbqService.GetAsync(id);
 				if (bbq == null)
 					throw new Exception("Bbq not found.");
 
@@ -41,12 +42,12 @@ namespace Serverless_Api
                     // Sending invites
 					foreach (var personId in lookups.PeopleIds)
 					{
-						var person = await _personRepository.GetAsync(personId);
+						var person = await _personService.GetAsync(personId);
 						if (person != null && !lookups.ModeratorIds.Any(x => x.Equals(person.Id)))
 						{
 							var @event = new PersonHasBeenInvitedToBbq(bbq.Id, bbq.Date, bbq.Reason);
 							person.Apply(@event);
-							await _personRepository.SaveAsync(person);
+							await _personService.SaveAsync(person);
 						}
 					}
                 }
@@ -55,7 +56,7 @@ namespace Serverless_Api
 					// Reject all invites
 					foreach (var personId in lookups.PeopleIds)
 					{
-						var person = await _personRepository.GetAsync(personId);
+						var person = await _personService.GetAsync(personId);
 						Invite invite = person.Invites.FirstOrDefault(x => x.Id == bbq.Id);
 						if (invite != null)
 						{
@@ -65,12 +66,12 @@ namespace Serverless_Api
 							};
 
 							person.Apply(@event);
-							await _personRepository.SaveAsync(person);
+							await _personService.SaveAsync(person);
 						}
 					}
 				}
 
-				await _bdqRepository.SaveAsync(bbq);
+				await _bbqService.SaveAsync(bbq);
 
                 return await req.CreateResponse(System.Net.HttpStatusCode.OK, bbq.TakeSnapshot());
 			}
