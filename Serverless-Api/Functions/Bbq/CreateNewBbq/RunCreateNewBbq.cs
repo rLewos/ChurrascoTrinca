@@ -23,7 +23,6 @@ namespace Serverless_Api
 		{
 			_user = user;
 			_snapshots = snapshots;
-			//_personRepository = personRepository;
 			_personService = personService;
 			_bbqService = bbqService;
 		}
@@ -31,38 +30,23 @@ namespace Serverless_Api
 		[Function(nameof(RunCreateNewBbq))]
         public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Function, "post", Route = "churras")] HttpRequestData req)
         {
-            var input = await req.Body<NewBbqRequest>();
+			try
+			{
+				var input = await req.Body<NewBbqRequest>();
+				if (input == null)
+					return await req.CreateResponse(HttpStatusCode.BadRequest, "input is required.");
 
-            if (input == null)
-                return await req.CreateResponse(HttpStatusCode.BadRequest, "input is required.");
+				Bbq? bbq = await _bbqService.CreateNew(input.Date, input.Reason, input.IsTrincasPaying);
+				var churrasSnapshot = bbq.TakeSnapshot();
+				return await req.CreateResponse(HttpStatusCode.Created, churrasSnapshot);
+			}
+			catch (Exception e)
+			{
 
-            var churras = new Bbq();
-            churras.Apply(new ThereIsSomeoneElseInTheMood(Guid.NewGuid(), input.Date, input.Reason, input.IsTrincasPaying));
-            await _bbqService.SaveAsync(churras);
-
-            var churrasSnapshot = churras.TakeSnapshot();
-
-            // Invite Moderators
-            var Lookups = await _snapshots.AsQueryable<Lookups>("Lookups").SingleOrDefaultAsync();
-            try
-            {
-                foreach (var personId in Lookups.ModeratorIds)
-                {
-                    Person? person = await _personService.GetAsync(personId);
-					var @event = new PersonHasBeenInvitedToBbq(churras.Id, churras.Date, churras.Reason);                    
-                    person.Apply(@event);
-                    
-                    await _personService.SaveAsync(person);
-                }
-            }
-            catch (Exception e)
-            {
-
-                throw;
-            }
+				return req.CreateResponse(System.Net.HttpStatusCode.NoContent);
+			}
 
 
-            return await req.CreateResponse(HttpStatusCode.Created, churrasSnapshot);
         }
     }
 }
