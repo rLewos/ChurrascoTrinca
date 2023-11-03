@@ -32,7 +32,7 @@ namespace Serverless_Api
 			catch (Exception e)
 			{
 
-				return req.CreateResponse(System.Net.HttpStatusCode.NoContent);
+				return await req.CreateResponse(System.Net.HttpStatusCode.NoContent, new { Message = e.Message, Type = "Error" });
 			}
 
 			return await req.CreateResponse(System.Net.HttpStatusCode.OK, 
