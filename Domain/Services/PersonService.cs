@@ -5,6 +5,7 @@ using Eveneum;
 using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -26,6 +27,9 @@ namespace Domain.Services
 
 			if (person == null)
 				throw new Exception("Person not found.");
+
+			if (person.Invites.Any(x => x.Id == inviteId && x.Status == InviteStatus.Accepted))
+				throw new Exception("Invite already accepted");
 
 			person.Apply(new InviteWasAccepted { InviteId = inviteId, IsVeg = isVeg, PersonId = person.Id });
 			await this.SaveAsync(person);
