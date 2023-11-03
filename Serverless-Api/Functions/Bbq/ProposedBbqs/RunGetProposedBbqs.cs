@@ -24,16 +24,16 @@ namespace Serverless_Api
         public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Function, "get", Route = "churras")] HttpRequestData req)
         {
             var snapshots = new List<object>();
-            var moderator = await _personService.GetAsync(_user.Id);
-            foreach (var bbqId in moderator.Invites.Where(i => i.Date > DateTime.Now).Select(o => o.Id).ToList())
+
+            try
             {
-                var bbq = await _bbqService.GetAsync(bbqId);
-                if (bbq == null)
-                    throw new Exception("Bbq not found.");
-                    
-                if(bbq.Status != BbqStatus.ItsNotGonnaHappen)
-                    snapshots.Add(bbq.TakeSnapshot());
-            }
+				snapshots = await _bbqService.GetAllNotRejectedOrAvailable(_user.Id);
+			}
+            catch (Exception e)
+            {
+
+				return req.CreateResponse(System.Net.HttpStatusCode.NoContent);
+			}
 
             return await req.CreateResponse(HttpStatusCode.Created, snapshots);
         }

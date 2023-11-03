@@ -27,19 +27,16 @@ namespace Serverless_Api
         [Function(nameof(RunDeclineInvite))]
         public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Function, "put", Route = "person/invites/{inviteId}/decline")] HttpRequestData req, string inviteId)
         {
-            var person = await _personService.GetAsync(_user.Id);
+            Person? person = null;
+            try
+            {
+                person = await _personService.DeclineInvite(_user.Id, inviteId);
+            }
+            catch (Exception e)
+            {
+				return req.CreateResponse(System.Net.HttpStatusCode.NoContent);
+			}
 
-            if (person == null)
-                return req.CreateResponse(System.Net.HttpStatusCode.NoContent);
-
-            person.Apply(new InviteWasDeclined { InviteId = inviteId, PersonId = person.Id });
-            await _personService.SaveAsync(person);
-
-            //Implementar impacto da recusa do convite no churrasco caso ele já tivesse sido aceito antes
-            Bbq? bbq = await _bbqService.GetAsync(inviteId);
-            var @event = new InviteWasDeclined() { InviteId = inviteId, PersonId = person.Id};
-            bbq.Apply(@event);
-            await _bbqService.SaveAsync(bbq);
 
             return await req.CreateResponse(System.Net.HttpStatusCode.OK, person.TakeSnapshot());
         }

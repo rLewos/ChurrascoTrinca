@@ -21,16 +21,19 @@ namespace Serverless_Api
 		[Function(nameof(RunGetShoppingList))]
 		public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Function, "get", Route = "churras/{id}/shoppinglist")] HttpRequestData req, string id)
 		{
-			Person? person = await _personService.GetAsync(_user.Id);
-			if (person == null)
-				throw new NullReferenceException("Person not found.");
+			Bbq? bbq = null;
+			try
+			{
+				if (string.IsNullOrEmpty(id))
+					throw new ArgumentNullException("Bbq id is null.");
 
-			if (!person.IsCoOwner)
-				throw new Exception("Person is not 'CoOwner'");
+				bbq = await _bbqService.GetShoppingListByBbqId(_user.Id, id);
+			}
+			catch (Exception e)
+			{
 
-			Bbq? bbq = await _bbqService.GetAsync(id);
-			if (bbq == null)
-				throw new Exception("Bbq not found.");
+				return req.CreateResponse(System.Net.HttpStatusCode.NoContent);
+			}
 
 			return await req.CreateResponse(System.Net.HttpStatusCode.OK, 
 				new { ShoppingList = bbq.ShoppingL, 

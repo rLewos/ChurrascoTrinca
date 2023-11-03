@@ -10,23 +10,27 @@ namespace Serverless_Api
     public partial class RunGetInvites
     {
         private readonly Person _user;
-        //private readonly IPersonRepository _personRepository;
         private readonly IPersonService _personService;
 
         public RunGetInvites(Person user, IPersonService personService)
         {
             _user = user;
-			//_personRepository = personRepository;
             _personService = personService;
         }
 
         [Function(nameof(RunGetInvites))]
         public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Function, "get", Route = "person/invites")] HttpRequestData req)
         {
-            var person = await _personService.GetAsync(_user.Id);
+            Person? person = null;
 
-            if (person == null)
-                return req.CreateResponse(System.Net.HttpStatusCode.NoContent);
+			try
+            {
+				person = await _personService.GetInvitesByUserId(_user.Id);
+			}
+            catch (Exception e)
+            {
+				return req.CreateResponse(System.Net.HttpStatusCode.NoContent);
+			}
 
             return await req.CreateResponse(System.Net.HttpStatusCode.OK, person.TakeSnapshot());
         }
