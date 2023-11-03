@@ -9,6 +9,7 @@ using Domain.Repositories;
 using Microsoft.Azure.Cosmos;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
+using Domain.Services;
 
 namespace Domain
 {
@@ -62,7 +63,9 @@ namespace Domain
 
         public static IServiceCollection AddRepositoriesDependencies(this IServiceCollection services)
             => services.AddTransient<IBbqRepository, BbqRepository>()
-            .AddTransient<IPersonRepository, PersonRepository>();
+            .AddTransient<IPersonRepository, PersonRepository>()
+            .AddTransient<IPersonService, PersonService>()
+            .AddTransient<IBbqService, BbqService>();
 
         private async static Task CreateIfNotExists(this CosmosClient client, string database, string collection)
         {

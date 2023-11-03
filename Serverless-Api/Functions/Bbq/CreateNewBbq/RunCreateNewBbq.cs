@@ -7,6 +7,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Domain.Repositories;
 using Domain;
+using Domain.Services;
 
 namespace Serverless_Api
 {
@@ -15,15 +16,16 @@ namespace Serverless_Api
         private readonly Person _user;
         private readonly SnapshotStore _snapshots;
         
-        private readonly IPersonRepository _personRepository;
-        private readonly IBbqRepository _bbqRepository;
+        private readonly IPersonService _personService;
+        private readonly IBbqService _bbqService;
 
-		public RunCreateNewBbq(IPersonRepository personRepository, IBbqRepository bbqRepository, SnapshotStore snapshots, Person user)
+		public RunCreateNewBbq(IPersonService personService, IBbqService bbqService, SnapshotStore snapshots, Person user)
 		{
 			_user = user;
 			_snapshots = snapshots;
-            _personRepository = personRepository;
-            _bbqRepository = bbqRepository;			
+			//_personRepository = personRepository;
+			_personService = personService;
+			_bbqService = bbqService;
 		}
 
 		[Function(nameof(RunCreateNewBbq))]
@@ -36,7 +38,7 @@ namespace Serverless_Api
 
             var churras = new Bbq();
             churras.Apply(new ThereIsSomeoneElseInTheMood(Guid.NewGuid(), input.Date, input.Reason, input.IsTrincasPaying));
-            await _bbqRepository.SaveAsync(churras);
+            await _bbqService.SaveAsync(churras);
 
             var churrasSnapshot = churras.TakeSnapshot();
 
@@ -46,11 +48,11 @@ namespace Serverless_Api
             {
                 foreach (var personId in Lookups.ModeratorIds)
                 {
-                    Person? person = await _personRepository.GetAsync(personId);
+                    Person? person = await _personService.GetAsync(personId);
 					var @event = new PersonHasBeenInvitedToBbq(churras.Id, churras.Date, churras.Reason);                    
                     person.Apply(@event);
                     
-                    await _personRepository.SaveAsync(person);
+                    await _personService.SaveAsync(person);
                 }
             }
             catch (Exception e)

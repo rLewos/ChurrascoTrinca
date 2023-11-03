@@ -72,7 +72,7 @@ namespace Domain.Entities
             Status = BbqStatus.New;
         }
 
-        public void When(BbqStatusUpdated @event)
+		public void When(BbqStatusUpdated @event)
         {
             if (@event.GonnaHappen)
                 Status = BbqStatus.PendingConfirmations;
@@ -83,7 +83,7 @@ namespace Domain.Entities
                 IsTrincasPaying = true;
         }
 
-        public void When(InviteWasDeclined @event)
+		public void When(InviteWasDeclined @event)
         {
             //TODO:Deve ser possível rejeitar um convite já aceito antes.
             //Se este for o caso, a quantidade de comida calculada pelo aceite anterior do convite
@@ -102,7 +102,7 @@ namespace Domain.Entities
                 Status = BbqStatus.PendingConfirmations;
         }
 
-        public void When(PersonHasConfirmed @event)
+		public void When(PersonHasConfirmed @event)
         {
             var person = ConfirmedL.FirstOrDefault(x => x.Id == @event.PersonID);
 			if (person == null)
